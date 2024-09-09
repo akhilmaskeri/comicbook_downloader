@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Image Downloader and PDF Creator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; }
+        input[type="text"] { width: 100%; padding: 10px; margin-bottom: 10px; }
+        button { padding: 10px 15px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+        #imageList { list-style-type: none; padding: 0; }
+        #imageList li { margin-bottom: 10px; }
+        #status { margin-top: 20px; font-weight: bold; }
+        #errorMessage { color: red; margin-top: 5px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <h1>Web Image Downloader and PDF Creator</h1>
+    <input type="text" id="urlInput" placeholder="Enter URL to download images from">
+    <div id="errorMessage"></div>
+    <button onclick="fetchImages()">Fetch Images</button>
+    <button onclick="createPDF()" id="createPDFButton" style="display: none;">Create PDF</button>
+    <div id="status"></div>
+    <ul id="imageList"></ul>
+
+    <script>
+        const imageUrls = [];
+
+        function setStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function setErrorMessage(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = message ? 'block' : 'none';
+        }
+
+        async function fetchImages() {
+            const url = document.getElementById('urlInput').value;
+            if (!url) {
+                setErrorMessage('Please enter a URL');
+                return;
+            }
+
+            setErrorMessage('');
+            setStatus('Fetching images...');
+            try {
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                const response = await fetch(proxyUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.status && data.status.http_code !== 200) {
+                    throw new Error(`Failed to fetch the page. HTTP status: ${data.status.http_code}`);
+                }
+                
+                const htmlContent = data.contents;
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlContent, 'text/html');
+                
+                const images = Array.from(doc.querySelectorAll('img'))
+                    .filter(img => isMainContentImage(img))
+                    .map(img => {
+                        const src = img.src || img.getAttribute('data-src');
+                        return src.startsWith('http') ? src : new URL(src, url).href;
+                    });
+
+                if (images.length === 0) {
+                    setErrorMessage('No images found on the page. Please try another URL.');
+                    return;
+                }
+
+                displayImages(images);
+                setStatus(`Found ${images.length} images. Click on the links to download.`);
+                document.getElementById('createPDFButton').style.display = 'inline-block';
+            } catch (error) {
+                console.error('Fetch error:', error);
+                setErrorMessage(`Error: ${error.message}`);
+                setStatus('');
+            }
+        }
+
+        function isMainContentImage(img) {
+            const classStr = (img.className || '').toLowerCase();
+            if (classStr.includes('logo') || classStr.includes('icon') || classStr.includes('button')) {
+                return false;
+            }
+            let parent = img.parentElement;
+            while (parent) {
+                if (['HEADER', 'FOOTER', 'NAV'].includes(parent.tagName)) {
+                    return false;
+                }
+                parent = parent.parentElement;
+            }
+            return true;
+        }
+
+        function displayImages(images) {
+            const imageList = document.getElementById('imageList');
+            imageList.innerHTML = '';
+            images.forEach((url, index) => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = url;
+                a.textContent = `Image ${index + 1}`;
+                a.target = '_blank'; // Open in new tab
+                li.appendChild(a);
+                imageList.appendChild(li);
+                imageUrls.push(url);
+            });
+        }
+
+        function createPDF() {
+            setStatus('Creating PDF...');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            imageUrls.forEach((url, index) => {
+                if (index > 0) {
+                    doc.addPage();
+                }
+                doc.setFontSize(12);
+                doc.text(`Image ${index + 1}`, 10, 10);
+                doc.setFontSize(8);
+                doc.text(url, 10, 20, { maxWidth: 180 });
+                doc.rect(10, 30, 190, 200);
+                doc.text("Image placeholder - actual images cannot be included due to browser limitations", 20, 130);
+            });
+
+            doc.save('images.pdf');
+            setStatus('PDF created with image placeholders. Download started.');
+        }
+    </script>
+</body>
+</html>
