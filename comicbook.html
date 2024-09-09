@@ -8,20 +8,28 @@
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; }
         input[type="text"] { width: 100%; padding: 10px; margin-bottom: 10px; }
-        button { padding: 10px 15px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        button { padding: 10px 15px; background-color: #4CAF50; color: white; border: none; cursor: pointer; margin-right: 10px; }
         button:hover { background-color: #45a049; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
         #imageList { list-style-type: none; padding: 0; }
         #imageList li { margin-bottom: 10px; }
         #status { margin-top: 20px; font-weight: bold; }
         #errorMessage { color: red; margin-top: 5px; margin-bottom: 15px; }
+        #spinner { display: none; margin-top: 20px; text-align: center; }
+        .spinner-border { display: inline-block; width: 2rem; height: 2rem; vertical-align: text-bottom; border: 0.25em solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spinner-border .75s linear infinite; }
+        @keyframes spinner-border { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <h1>Web Image Downloader and PDF Creator</h1>
     <input type="text" id="urlInput" placeholder="Enter URL to download images from">
     <div id="errorMessage"></div>
-    <button onclick="fetchImages()">Fetch Images</button>
-    <button onclick="createPDF()" id="createPDFButton" style="display: none;">Create PDF</button>
+    <button onclick="fetchImages()" id="fetchButton">Fetch Images</button>
+    <button onclick="createPDF()" id="createPDFButton" style="display: none;">Download PDF</button>
+    <div id="spinner">
+        <div class="spinner-border" role="status"></div>
+        <div id="progressText">Fetching: 0%</div>
+    </div>
     <div id="status"></div>
     <ul id="imageList"></ul>
 
@@ -38,6 +46,10 @@
             errorElement.style.display = message ? 'block' : 'none';
         }
 
+        function updateProgress(percent) {
+            document.getElementById('progressText').textContent = `Fetching: ${percent}%`;
+        }
+
         async function fetchImages() {
             const url = document.getElementById('urlInput').value;
             if (!url) {
@@ -46,8 +58,15 @@
             }
 
             setErrorMessage('');
-            setStatus('Fetching images...');
+            setStatus('');
+            document.getElementById('spinner').style.display = 'block';
+            document.getElementById('fetchButton').disabled = true;
+            document.getElementById('createPDFButton').style.display = 'none';
+            document.getElementById('imageList').innerHTML = '';
+            imageUrls.length = 0;
+
             try {
+                updateProgress(10);
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
                 const response = await fetch(proxyUrl);
                 
@@ -55,16 +74,19 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
+                updateProgress(30);
                 const data = await response.json();
                 
                 if (data.status && data.status.http_code !== 200) {
                     throw new Error(`Failed to fetch the page. HTTP status: ${data.status.http_code}`);
                 }
                 
+                updateProgress(50);
                 const htmlContent = data.contents;
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlContent, 'text/html');
                 
+                updateProgress(70);
                 const images = Array.from(doc.querySelectorAll('img'))
                     .filter(img => isMainContentImage(img))
                     .map(img => {
@@ -73,17 +95,20 @@
                     });
 
                 if (images.length === 0) {
-                    setErrorMessage('No images found on the page. Please try another URL.');
-                    return;
+                    throw new Error('No images found on the page. Please try another URL.');
                 }
 
+                updateProgress(90);
                 displayImages(images);
-                setStatus(`Found ${images.length} images. Click on the links to download.`);
+                updateProgress(100);
+                setStatus(`Found ${images.length} images.`);
                 document.getElementById('createPDFButton').style.display = 'inline-block';
             } catch (error) {
                 console.error('Fetch error:', error);
                 setErrorMessage(`Error: ${error.message}`);
-                setStatus('');
+            } finally {
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('fetchButton').disabled = false;
             }
         }
 
