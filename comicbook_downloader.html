@@ -6,10 +6,44 @@
     <title>Web Image Downloader and PDF Creator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; }
-        input[type="text"] { width: 100%; padding: 10px; margin-bottom: 10px; }
-        button { padding: 10px 15px; background-color: #4CAF50; color: white; border: none; cursor: pointer; margin-right: 10px; }
-        button:hover { background-color: #45a049; }
+        body { 
+            font-family: 'Comic Neue', cursive;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto; 
+        }
+        input[type="text"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+            font-size: 16px;
+            border: 3px solid #000;
+            border-radius: 12px;
+            background-color: #fff;
+            box-shadow: 3px 3px 0 #000;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            box-shadow: 5px 5px 0 #000;
+        }
+        button { 
+            padding: 10px 15px; 
+            background-color: #f9f6b6; 
+            color: #000; 
+            border: solid 1.5px #000;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-right: 10px; 
+        }
+        #fetchButton {
+            font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+        }
+
+        button:hover { background-color: #f9e6b6; }
         button:disabled { background-color: #cccccc; cursor: not-allowed; }
         #status { margin-top: 20px; font-weight: bold; }
         #errorMessage { color: red; margin-top: 5px; margin-bottom: 15px; }
@@ -19,12 +53,16 @@
         #comicName { font-weight: bold; margin-top: 10px; }
         #statistics { margin-top: 20px; }
     </style>
+
+    <!-- font -->
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
+    
 </head>
 <body>
-    <h1>Web Image Downloader and PDF Creator</h1>
+    <h1><i>The Comicbook Downloader</i></h1>
     <input type="text" id="urlInput" placeholder="Enter URL to download images from">
     <div id="errorMessage"></div>
-    <button onclick="fetchImages()" id="fetchButton">Fetch Images</button>
+    <button onclick="fetchImages()" id="fetchButton"><b>FETCH MY COMIC ...</b></button>
     <button onclick="createPDF()" id="createPDFButton" style="display: none;">Download PDF</button>
     <div id="comicName"></div>
     <div id="spinner">
